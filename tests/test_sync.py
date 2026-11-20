@@ -136,3 +136,17 @@ def test_fingerprint_changes_with_record():
     b = plan_sync(inv, [_ip(1, "192.0.2.10", status="deprecated")], TARGETS).updates[0]
     assert a.fingerprint != b.fingerprint
     assert a.fingerprint == plan_sync(inv, [_ip(1, "192.0.2.10", status="reserved")], TARGETS).updates[0].fingerprint
+
+
+def test_orphan_record_has_fingerprint():
+    record = _ip(1, "192.0.2.99")
+    [orphan] = plan_sync([_inv(_vs("app1_443_vsvr", "192.0.2.10"))], [record], TARGETS).orphans
+    assert orphan.fingerprint and orphan.fingerprint == _ip(1, "192.0.2.99").fingerprint
+
+
+def test_update_keeps_existing_dns_even_if_gslb_differs():
+    """Existing DNS names are usually the user-facing name; GSLB zone names (e.g. *.gslb...) must not replace them."""
+    desc = "NetScaler VIP - SSL:443 - UP [app1_443_vsvr]"
+    gslb = [GslbName("Pair A", "g", ["app1.gslb.example.com"], "UP", [("192.0.2.10", 443)])]
+    record = _ip(1, "192.0.2.10", description=desc, dns="app1.example.com")
+    assert plan_sync([_inv(_vs("app1_443_vsvr", "192.0.2.10"), gslb=gslb)], [record], TARGETS).updates == []

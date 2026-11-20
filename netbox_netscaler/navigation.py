@@ -9,6 +9,11 @@ _items = (
         link_text="Stale VIPs",
         permissions=["ipam.view_ipaddress"],
     ),
+    PluginMenuItem(
+        link="plugins:netbox_netscaler:sync_vips",
+        link_text="Sync VIPs",
+        permissions=["ipam.view_ipaddress"],
+    ),
 )
 
 _menu = PluginMenu(label="NetScaler", groups=(("Load Balancing", _items),), icon_class="mdi mdi-scale-balance")

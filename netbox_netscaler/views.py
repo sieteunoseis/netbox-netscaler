@@ -4,13 +4,15 @@ from functools import lru_cache
 
 from dcim.models import Device
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
 from netbox.views import generic
 from utilities.views import ViewTab, register_model_view
-from virtualization.models import VirtualMachine
+from virtualization.models import VirtualMachine, VMInterface
 
 from .api import memberships_for
 from .cache import cached_inventories, clear, get_inventories
@@ -120,3 +122,56 @@ class RefreshView(LoginRequiredMixin, View):
         if not url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
             target = "/"
         return redirect(target)
+
+
+class SyncVipsView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Preview, then apply selected VIP changes to NetBox IPAM. Never writes to NetScaler."""
+
+    permission_required = "ipam.view_ipaddress"
+    template_name = "netbox_netscaler/sync_vips.html"
+
+    def get(self, request):
+        from .sync_netbox import build_plan, load_targets
+
+        inventories = get_inventories()
+        plan = build_plan(inventories)
+        ids = {i for c in plan.updates for i in (c.fields.get("interface_id") or ()) if i}
+        names = {
+            i.pk: f"{i.virtual_machine.name} / {i.name}"
+            for i in VMInterface.objects.filter(pk__in=ids).select_related("virtual_machine")
+        }
+        for change in plan.updates:
+            change.display = [
+                (f, *(names.get(v, v or "unassigned") for v in pair)) if f == "interface_id" else (f, *pair)
+                for f, pair in change.fields.items()
+            ]
+        return render(
+            request,
+            self.template_name,
+            {
+                "pairs": inventories,
+                "plan": plan,
+                "targets": load_targets(inventories),
+                "can_add": request.user.has_perm("ipam.add_ipaddress"),
+                "can_change": request.user.has_perm("ipam.change_ipaddress"),
+            },
+        )
+
+    def post(self, request):
+        from .sync_netbox import apply, build_plan
+
+        selected = set(request.POST.getlist("row"))
+        if any(k.startswith("create:") for k in selected) and not request.user.has_perm("ipam.add_ipaddress"):
+            raise PermissionDenied
+        if any(not k.startswith("create:") for k in selected) and not request.user.has_perm("ipam.change_ipaddress"):
+            raise PermissionDenied
+        fingerprints = {k: request.POST.get(f"fp:{k}", "") for k in selected}
+        result = apply(build_plan(), selected, fingerprints, request.user)
+        messages.success(
+            request,
+            f"Created {len(result['created'])}, updated {len(result['updated'])}, "
+            f"deprecated {len(result['deprecated'])}, skipped {len(result['skipped'])}.",
+        )
+        for key, reason in result["skipped"]:
+            messages.warning(request, f"Skipped {key}: {reason}")
+        return redirect("plugins:netbox_netscaler:sync_vips")

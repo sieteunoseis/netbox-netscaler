@@ -24,6 +24,10 @@ class NbIp:
     dns_name: str
     interface_id: int | None
 
+    @property
+    def fingerprint(self) -> str:
+        return fingerprint(self)
+
 
 @dataclass
 class Target:
@@ -126,7 +130,7 @@ def plan_sync(inventories: list[PairInventory], records: list[NbIp], targets: di
             fields["status"] = (record.status, want.status)
         if record.description != want.description:
             fields["description"] = (record.description, want.description)
-        if want.dns_name and record.dns_name != want.dns_name:
+        if want.dns_name and not record.dns_name:  # fill blanks only; never replace a curated name
             fields["dns_name"] = (record.dns_name, want.dns_name)
         if want.interface_id is not None and record.interface_id != want.interface_id:
             fields["interface_id"] = (record.interface_id, want.interface_id)

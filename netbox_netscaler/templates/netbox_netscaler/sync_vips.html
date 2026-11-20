@@ -1,0 +1,113 @@
+{% extends 'base/layout.html' %}
+{% load helpers %}
+
+{% block title %}Sync NetScaler VIPs{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        {% include 'netbox_netscaler/_pairs.html' %}
+        <p class="text-muted small">
+            Compares live NetScaler VIPs with NetBox IPAM. Nothing changes until you tick rows and click <strong>Apply selected</strong>.
+            NetScaler itself is never changed. New and moved records attach to the current Primary's VM:
+            {% for name, t in targets.items %}<span class="badge text-bg-secondary">{{ name }} &rarr; {{ t.vm_name|default:"no NetBox VM" }}</span> {% endfor %}
+        </p>
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="card mb-3">
+                <div class="card-header"><h5 class="card-title mb-0"><i class="mdi mdi-plus-circle-outline"></i> Create: UP VIPs missing from NetBox <span class="badge text-bg-primary ms-2">{{ plan.creates|length }}</span></h5></div>
+                <div class="card-body">
+                {% if plan.creates %}
+                <table class="table table-hover align-middle">
+                    <thead><tr><th></th><th>Pair</th><th>Address</th><th>Vserver</th><th>Status</th><th>DNS name</th><th>Attach to</th></tr></thead>
+                    <tbody>
+                    {% for d in plan.creates %}
+                    <tr>
+                        <td><input type="checkbox" class="form-check-input" name="row" value="create:{{ d.host }}" {% if not can_add %}disabled{% endif %}></td>
+                        <td>{{ d.pair }}</td><td>{{ d.host }}/32</td><td><code>{{ d.vserver }}</code><div class="text-muted small">{{ d.description }}</div></td>
+                        <td><span class="badge text-bg-success">{{ d.status }}</span></td><td>{{ d.dns_name|default:"&mdash;" }}</td>
+                        <td>{% if d.vm_name %}{{ d.vm_name }}{% else %}<span class="badge text-bg-warning">unassigned: no NetBox VM</span>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}<p class="mb-0 text-muted">Every UP VIP already has a NetBox IP record.</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header"><h5 class="card-title mb-0"><i class="mdi mdi-pencil-outline"></i> Update: VIP records out of date <span class="badge text-bg-primary ms-2">{{ plan.updates|length }}</span></h5></div>
+                <div class="card-body">
+                {% if plan.updates %}
+                <table class="table table-hover align-middle">
+                    <thead><tr><th></th><th>Record</th><th>Pair / vserver</th><th>Changes (old &rarr; new)</th></tr></thead>
+                    <tbody>
+                    {% for c in plan.updates %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input" name="row" value="update:{{ c.ip.pk }}" {% if not can_change %}disabled{% endif %}>
+                            <input type="hidden" name="fp:update:{{ c.ip.pk }}" value="{{ c.fingerprint }}">
+                        </td>
+                        <td><a href="{% url 'ipam:ipaddress' pk=c.ip.pk %}">{{ c.ip.address }}</a></td>
+                        <td>{{ c.desired.pair }}<div><code>{{ c.desired.vserver }}</code></div></td>
+                        <td>{% for field, old, new in c.display %}<div><strong>{{ field }}</strong>: <span class="text-muted">{{ old|default:"&mdash;" }}</span> &rarr; {{ new }}</div>{% endfor %}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}<p class="mb-0 text-muted">All VIP records match NetScaler.</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header"><h5 class="card-title mb-0"><i class="mdi mdi-help-circle-outline"></i> Orphaned: VIP records not on any NetScaler <span class="badge text-bg-primary ms-2">{{ plan.orphans|length }}</span></h5></div>
+                <div class="card-body">
+                {% if plan.orphans_suppressed %}
+                <div class="alert alert-warning mb-0"><i class="mdi mdi-alert"></i> Not shown while a NetScaler pair is unavailable, so nothing gets deprecated because a box is unreachable.</div>
+                {% elif plan.orphans %}
+                <p class="text-muted small">The only action offered is setting the status to <em>deprecated</em>. Nothing is deleted.</p>
+                <table class="table table-hover align-middle">
+                    <thead><tr><th></th><th>Record</th><th>Status</th><th>DNS name</th><th>Description</th></tr></thead>
+                    <tbody>
+                    {% for ip in plan.orphans %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input" name="row" value="orphan:{{ ip.pk }}" {% if not can_change %}disabled{% endif %}>
+                            <input type="hidden" name="fp:orphan:{{ ip.pk }}" value="{{ ip.fingerprint }}">
+                        </td>
+                        <td><a href="{% url 'ipam:ipaddress' pk=ip.pk %}">{{ ip.address }}</a></td>
+                        <td><span class="badge text-bg-secondary">{{ ip.status }}</span></td><td>{{ ip.dns_name|default:"&mdash;" }}</td><td class="small">{{ ip.description }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}<p class="mb-0 text-muted">No orphaned VIP records.</p>{% endif %}
+                </div>
+            </div>
+
+            {% if plan.conflicts %}
+            <div class="card mb-3">
+                <div class="card-header"><h5 class="card-title mb-0"><i class="mdi mdi-alert-outline"></i> Conflicts: non-VIP records at a VIP address (never changed) <span class="badge text-bg-warning ms-2">{{ plan.conflicts|length }}</span></h5></div>
+                <div class="card-body">
+                <table class="table table-sm align-middle">
+                    <thead><tr><th>Record</th><th>Role</th><th>Status</th><th>VIP on NetScaler</th></tr></thead>
+                    <tbody>
+                    {% for ip, d in plan.conflicts %}
+                    <tr><td><a href="{% url 'ipam:ipaddress' pk=ip.pk %}">{{ ip.address }}</a></td><td>{{ ip.role|default:"&mdash;" }}</td><td>{{ ip.status }}</td><td>{{ d.pair }} <code>{{ d.vserver }}</code></td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if can_add or can_change %}
+            <button type="submit" class="btn btn-primary"><i class="mdi mdi-check"></i> Apply selected</button>
+            {% else %}
+            <div class="alert alert-info">You can preview, but applying needs permission to add or change IP addresses.</div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock %}
