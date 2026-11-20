@@ -1,0 +1,46 @@
+{
+ "errorcode": 0,
+ "message": "Done",
+ "servicegroup_servicegroupmember_binding": [
+  {
+   "servicegroupname": "app1_443_sg",
+   "servername": "app1a.example.com",
+   "ip": "198.51.100.11",
+   "port": 443,
+   "svrstate": "UP",
+   "state": "ENABLED"
+  },
+  {
+   "servicegroupname": "app1_443_sg",
+   "servername": "app1b.example.com",
+   "ip": "198.51.100.12",
+   "port": 443,
+   "svrstate": "DOWN",
+   "state": "ENABLED"
+  },
+  {
+   "servicegroupname": "dead_443_sg",
+   "servername": "wrongname.example.com",
+   "ip": "198.51.100.60",
+   "port": 443,
+   "svrstate": "DOWN",
+   "state": "ENABLED"
+  },
+  {
+   "servicegroupname": "dual_443_sg",
+   "servername": "dual-nic1.example.com",
+   "ip": "198.51.100.21",
+   "port": 443,
+   "svrstate": "UP",
+   "state": "ENABLED"
+  },
+  {
+   "servicegroupname": "dual_443_sg",
+   "servername": "dual-nic2.example.com",
+   "ip": "198.51.100.22",
+   "port": 443,
+   "svrstate": "UP",
+   "state": "ENABLED"
+  }
+ ]
+}

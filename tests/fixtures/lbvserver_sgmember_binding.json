@@ -1,0 +1,46 @@
+{
+ "errorcode": 0,
+ "message": "Done",
+ "lbvserver_servicegroupmember_binding": [
+  {
+   "name": "app1_443_vsvr",
+   "servicegroupname": "app1_443_sg",
+   "ipv46": "198.51.100.11",
+   "port": 443,
+   "servicetype": "SSL",
+   "curstate": "UP"
+  },
+  {
+   "name": "app1_443_vsvr",
+   "servicegroupname": "app1_443_sg",
+   "ipv46": "198.51.100.12",
+   "port": 443,
+   "servicetype": "SSL",
+   "curstate": "DOWN"
+  },
+  {
+   "name": "dead_443_vsvr",
+   "servicegroupname": "dead_443_sg",
+   "ipv46": "198.51.100.60",
+   "port": 443,
+   "servicetype": "SSL",
+   "curstate": "DOWN"
+  },
+  {
+   "name": "dual_443_vsvr",
+   "servicegroupname": "dual_443_sg",
+   "ipv46": "198.51.100.21",
+   "port": 443,
+   "servicetype": "SSL",
+   "curstate": "UP"
+  },
+  {
+   "name": "dual_443_vsvr",
+   "servicegroupname": "dual_443_sg",
+   "ipv46": "198.51.100.22",
+   "port": 443,
+   "servicetype": "SSL",
+   "curstate": "UP"
+  }
+ ]
+}

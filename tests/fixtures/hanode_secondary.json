@@ -1,0 +1,20 @@
+{
+ "errorcode": 0,
+ "message": "Done",
+ "hanode": [
+  {
+   "id": "0",
+   "name": "ns-a1.example.com",
+   "ipaddress": "203.0.113.1",
+   "state": "Secondary",
+   "hastatus": "UP"
+  },
+  {
+   "id": "1",
+   "name": "",
+   "ipaddress": "203.0.113.2",
+   "state": "Primary",
+   "hastatus": "UP"
+  }
+ ]
+}

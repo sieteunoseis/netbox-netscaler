@@ -1,0 +1,104 @@
+
+*~
+*$py.class
+build/
+# Byte-compiled / optimized / DLL files
+.cache
+celerybeat-schedule
+# celery beat schedule file
+# C extensions
+.claude/
+# Claude Code local settings
+CLAUDE.md
+*.cover
+.coverage
+.coverage.*
+coverage.xml
+develop-eggs/
+dist/
+# Distribution / packaging
+# Django stuff:
+.dmypy.json
+dmypy.json
+docs/_build/
+downloads/
+.DS_Store
+*.egg
+*.egg-info/
+.eggs/
+eggs/
+.env
+env/
+ENV/
+env.bak/
+# Environments
+# Flask stuff:
+htmlcov/
+.hypothesis/
+# IDE
+.idea/
+.installed.cfg
+# Installer logs
+instance/
+.ipynb_checkpoints
+# IPython
+ipython_config.py
+# Jupyter Notebook
+lib/
+lib64/
+local_settings.py
+*.log
+*.manifest
+# mkdocs documentation
+*.mo
+# mypy
+.mypy_cache/
+nosetests.xml
+.nox/
+# OS
+parts/
+pip-delete-this-directory.txt
+pip-log.txt
+*.pot
+profile_default/
+# PyBuilder
+__pycache__/
+*.py[cod]
+*.py,cover
+# pyenv
+# PyInstaller
+.pytest_cache/
+.Python
+.python-version
+.ropeproject
+# Rope project settings
+# SageMath parsed files
+*.sage.py
+.scrapy
+# Scrapy stuff:
+sdist/
+/site
+*.so
+*.spec
+# Sphinx documentation
+.spyderproject
+# Spyder project settings
+.spyproject
+.superpowers/
+*.swo
+*.swp
+target/
+Thumbs.db
+.tox/
+# Translations
+# Unit test / coverage reports
+var/
+.venv
+.venv/
+venv/
+venv.bak/
+.vscode/
+.webassets-cache
+wheels/
+wiki/
+# Wiki drafts (GitHub Wiki is a separate repo)

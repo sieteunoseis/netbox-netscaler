@@ -1,0 +1,13 @@
+{
+ "errorcode": 0,
+ "message": "Done",
+ "gslbvserver": [
+  {
+   "name": "app1-gslb",
+   "port": 0,
+   "servicetype": "SSL",
+   "curstate": "UP",
+   "state": "ENABLED"
+  }
+ ]
+}

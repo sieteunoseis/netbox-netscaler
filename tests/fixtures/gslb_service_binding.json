@@ -1,0 +1,13 @@
+{
+ "errorcode": 0,
+ "message": "Done",
+ "gslbvserver_gslbservice_binding": [
+  {
+   "name": "app1-gslb",
+   "servicename": "app1_local_svc",
+   "ipaddress": "192.0.2.10",
+   "port": 443,
+   "curstate": "UP"
+  }
+ ]
+}

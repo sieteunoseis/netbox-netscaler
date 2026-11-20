@@ -1,0 +1,10 @@
+{
+ "errorcode": 0,
+ "message": "Done",
+ "gslbvserver_domain_binding": [
+  {
+   "name": "app1-gslb",
+   "domainname": "app1.example.com"
+  }
+ ]
+}

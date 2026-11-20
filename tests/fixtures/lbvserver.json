@@ -1,0 +1,38 @@
+{
+ "errorcode": 0,
+ "message": "Done",
+ "lbvserver": [
+  {
+   "name": "app1_443_vsvr",
+   "ipv46": "192.0.2.10",
+   "port": 443,
+   "servicetype": "SSL",
+   "curstate": "UP",
+   "effectivestate": "UP"
+  },
+  {
+   "name": "dead_443_vsvr",
+   "ipv46": "192.0.2.20",
+   "port": 443,
+   "servicetype": "SSL",
+   "curstate": "DOWN",
+   "effectivestate": "DOWN"
+  },
+  {
+   "name": "empty_80_vsvr",
+   "ipv46": "192.0.2.30",
+   "port": 80,
+   "servicetype": "HTTP",
+   "curstate": "DOWN",
+   "effectivestate": "DOWN"
+  },
+  {
+   "name": "dual_443_vsvr",
+   "ipv46": "192.0.2.40",
+   "port": 443,
+   "servicetype": "SSL",
+   "curstate": "UP",
+   "effectivestate": "UP"
+  }
+ ]
+}
