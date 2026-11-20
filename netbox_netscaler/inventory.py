@@ -92,7 +92,13 @@ def build_inventory(pair_name: str, node: str, raw: dict[str, dict]) -> PairInve
             continue
         sg, ip, port = r.get("servicegroupname", ""), r.get("ipv46", ""), _port(r.get("port"))
         vserver.members.append(
-            Member(servicegroup=sg, ip=ip, port=port, state=r.get("curstate", ""), servername=servernames.get((sg, ip, port), ""))
+            Member(
+                servicegroup=sg,
+                ip=ip,
+                port=port,
+                state=r.get("curstate", ""),
+                servername=servernames.get((sg, ip, port), ""),
+            )
         )
 
     for r in _rows(raw[SERVICE_BY_VSERVER], "lbvserver_service_binding"):

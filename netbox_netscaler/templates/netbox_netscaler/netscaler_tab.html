@@ -1,0 +1,65 @@
+{% extends 'generic/object.html' %}
+{% load helpers %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        {% include 'netbox_netscaler/_pairs.html' %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="mdi mdi-scale-balance"></i> NetScaler VIPs using this {{ object|meta:"verbose_name" }}
+                    <span class="badge text-bg-primary ms-2">{{ vips|length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">Matched on IPs: {{ ips|join:", " }}. Read-only; change NetScaler on the appliance.</p>
+                {% if vips %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Pair</th><th>VIP</th><th>Address</th><th>State</th>
+                                <th>Service group / member</th><th>Flags</th><th>GSLB names</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for vip in vips %}
+                            {% for row in vip.rows %}
+                            <tr>
+                                {% if forloop.first %}
+                                <td rowspan="{{ vip.rows|length }}">{{ vip.vserver.pair }}</td>
+                                <td rowspan="{{ vip.rows|length }}"><code>{{ vip.vserver.name }}</code></td>
+                                <td rowspan="{{ vip.rows|length }}">{{ vip.vserver.ip }}:{{ vip.vserver.port }} <span class="text-muted">{{ vip.vserver.protocol }}</span></td>
+                                <td rowspan="{{ vip.rows|length }}">{% with state=vip.vserver.state %}{% include 'netbox_netscaler/_state.html' %}{% endwith %}</td>
+                                {% endif %}
+                                <td>
+                                    <code>{{ row.member.servicegroup|default:"(service)" }}</code><br>
+                                    {{ row.member.ip }}:{{ row.member.port }}
+                                    {% with state=row.member.state %}{% include 'netbox_netscaler/_state.html' %}{% endwith %}
+                                    {% if row.member.servername %}<span class="text-muted small">server {{ row.member.servername }}</span>{% endif %}
+                                </td>
+                                <td>
+                                    {% if row.last_live %}<span class="badge text-bg-danger" title="No other server behind this VIP is UP: it goes down with this one">Last live member</span>{% endif %}
+                                    {% if row.name_mismatch %}<span class="badge text-bg-warning" title="NetScaler server name '{{ row.member.servername }}' does not match the NetBox object or the IP's DNS name">Name mismatch</span>{% endif %}
+                                    {% if row.ambiguous %}<span class="badge text-bg-warning" title="{{ row.matches|length }} NetBox IP records have this address">Ambiguous IP</span>{% endif %}
+                                </td>
+                                {% if forloop.first %}
+                                <td rowspan="{{ vip.rows|length }}">
+                                    {% for g in vip.gslb %}{% for d in g.domains %}<div><code>{{ d }}</code></div>{% endfor %}{% empty %}<span class="text-muted">&mdash;</span>{% endfor %}
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="mb-0 text-muted"><i class="mdi mdi-check-circle-outline"></i> No VIP on the configured NetScalers has this {{ object|meta:"verbose_name" }} as a member.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

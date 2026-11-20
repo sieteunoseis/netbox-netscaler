@@ -1,0 +1,19 @@
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    {% for pair in pairs %}
+    {% if pair.available %}
+    <span class="badge text-bg-secondary" title="Fetched {{ pair.fetched_at|date:'Y-m-d H:i:s T' }}"><i class="mdi mdi-check"></i> {{ pair.name }} &middot; {{ pair.node }}</span>
+    {% else %}
+    <span class="badge text-bg-warning" title="{{ pair.error }}"><i class="mdi mdi-alert"></i> {{ pair.name }} unavailable</span>
+    {% endif %}
+    {% empty %}
+    <span class="text-muted">No NetScaler pairs configured (PLUGINS_CONFIG["netbox_netscaler"]["pairs"]).</span>
+    {% endfor %}
+    <form method="post" action="{% url 'plugins:netbox_netscaler:refresh' %}" class="ms-auto">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="mdi mdi-refresh"></i> Refresh</button>
+    </form>
+</div>
+{% for pair in pairs %}{% if not pair.available %}
+<div class="alert alert-warning py-2"><i class="mdi mdi-alert"></i> {{ pair.error }}</div>
+{% endif %}{% endfor %}

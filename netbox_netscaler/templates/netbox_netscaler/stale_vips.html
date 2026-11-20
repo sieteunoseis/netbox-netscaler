@@ -1,0 +1,63 @@
+{% extends 'base/layout.html' %}
+{% load helpers %}
+
+{% block title %}Stale NetScaler VIPs{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        {% include 'netbox_netscaler/_pairs.html' %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="mdi mdi-scale-balance"></i> VIPs with no live server behind them
+                    <span class="badge text-bg-primary ms-2">{{ rows|length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">Every member is DOWN, on a decommissioning/offline object, or not in NetBox. Read-only; clean up on the appliance.</p>
+                {% if rows %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr><th>Pair</th><th>VIP</th><th>Address</th><th>Reason</th><th>Members</th><th>GSLB names that break</th></tr>
+                        </thead>
+                        <tbody>
+                        {% for row in rows %}
+                            <tr>
+                                <td>{{ row.vserver.pair }}</td>
+                                <td><code>{{ row.vserver.name }}</code></td>
+                                <td>{{ row.vserver.ip }}:{{ row.vserver.port }} {% with state=row.vserver.state %}{% include 'netbox_netscaler/_state.html' %}{% endwith %}</td>
+                                <td>
+                                    <span class="badge text-bg-danger">{{ row.reason }}</span>
+                                    {% if row.name_mismatch %}<span class="badge text-bg-warning">Name mismatch</span>{% endif %}
+                                </td>
+                                <td>
+                                    {% for member, matches in row.members %}
+                                    <div>
+                                        {{ member.ip }}:{{ member.port }} {% with state=member.state %}{% include 'netbox_netscaler/_state.html' %}{% endwith %}
+                                        {% for m in matches %}
+                                        &rarr; <a href="{{ m.obj_url }}">{{ m.obj_name }}</a> <span class="badge text-bg-secondary">{{ m.status }}</span>
+                                        {% empty %}
+                                        <span class="text-muted">not in NetBox</span>
+                                        {% endfor %}
+                                        {% if member.servername %}<span class="text-muted small">({{ member.servername }})</span>{% endif %}
+                                    </div>
+                                    {% empty %}
+                                    <span class="text-muted">no members bound</span>
+                                    {% endfor %}
+                                </td>
+                                <td>{% for g in row.gslb %}{% for d in g.domains %}<div><code>{{ d }}</code></div>{% endfor %}{% empty %}<span class="text-muted">&mdash;</span>{% endfor %}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="mb-0 text-muted"><i class="mdi mdi-check-circle-outline"></i> No stale VIPs found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

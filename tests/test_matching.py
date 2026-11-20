@@ -29,8 +29,15 @@ def inventories():
         error=None,
         fetched_at=NOW,
         vservers=[
-            _vs("app1_443_vsvr", "192.0.2.10", 443, [_m("198.51.100.11", "UP", "app1a.example.com"), _m("198.51.100.12", "DOWN", "app1b.example.com")]),
-            _vs("dead_443_vsvr", "192.0.2.20", 443, [_m("198.51.100.60", "DOWN", "wrongname.example.com")], state="DOWN"),
+            _vs(
+                "app1_443_vsvr",
+                "192.0.2.10",
+                443,
+                [_m("198.51.100.11", "UP", "app1a.example.com"), _m("198.51.100.12", "DOWN", "app1b.example.com")],
+            ),
+            _vs(
+                "dead_443_vsvr", "192.0.2.20", 443, [_m("198.51.100.60", "DOWN", "wrongname.example.com")], state="DOWN"
+            ),
             _vs("empty_80_vsvr", "192.0.2.30", 80, [], state="DOWN"),
             _vs("dual_443_vsvr", "192.0.2.40", 443, [_m("198.51.100.21", "UP"), _m("198.51.100.22", "UP")]),
             _vs("retired_443_vsvr", "192.0.2.50", 443, [_m("198.51.100.70", "UP")]),
@@ -45,7 +52,15 @@ def inventories():
         error=None,
         fetched_at=NOW,
         vservers=[],
-        gslb=[GslbName(pair="Pair B", vserver="app1-gslb", domains=["app1.example.com"], state="UP", service_targets=[("192.0.2.10", 443)])],
+        gslb=[
+            GslbName(
+                pair="Pair B",
+                vserver="app1-gslb",
+                domains=["app1.example.com"],
+                state="UP",
+                service_targets=[("192.0.2.10", 443)],
+            )
+        ],
     )
     return [a, b]
 
@@ -141,7 +156,13 @@ def test_gslb_linked_across_pairs(inventories):
 
 def test_gslb_synced_on_two_pairs_listed_once(inventories):
     """GSLB config is synced to every site, so the same GSLB vserver appears on each pair."""
-    copy = GslbName(pair="Pair A", vserver="app1-gslb", domains=["app1.example.com"], state="UP", service_targets=[("192.0.2.10", 443)])
+    copy = GslbName(
+        pair="Pair A",
+        vserver="app1-gslb",
+        domains=["app1.example.com"],
+        state="UP",
+        service_targets=[("192.0.2.10", 443)],
+    )
     inventories[0].gslb.append(copy)
     app1 = inventories[0].vservers[0]
     assert [(g.vserver, g.domains) for g in gslb_for(app1, inventories)] == [("app1-gslb", ["app1.example.com"])]
