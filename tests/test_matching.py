@@ -181,3 +181,10 @@ def test_name_mismatch_ignores_ip_named_servers():
 
 def test_name_mismatch_handles_fqdn_object_names():
     assert is_name_mismatch("app1a.example.com", [_match("vm:1", "app1a.example.com")]) is False
+
+
+def test_vservers_at(inventories):
+    from netbox_netscaler.matching import vservers_at
+
+    assert [v.name for v in vservers_at("192.0.2.10", inventories)] == ["app1_443_vsvr"]
+    assert vservers_at("192.0.2.250", inventories) == []

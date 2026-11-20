@@ -155,3 +155,8 @@ def stale_vservers(inventories: list[PairInventory], resolve: Resolver) -> list[
                 )
             )
     return sorted(rows, key=lambda r: (r.vserver.pair, r.vserver.name))
+
+
+def vservers_at(host: str, inventories: list[PairInventory]) -> list[Vserver]:
+    """lb vservers (on any available pair) whose VIP is this address."""
+    return [v for inv in inventories if inv.available for v in inv.vservers if v.ip == host]

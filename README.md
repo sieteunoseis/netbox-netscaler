@@ -14,7 +14,23 @@ decommissions stop missing the load balancer.
   whose members are all DOWN, all on decommissioning or offline objects, or not in NetBox, as well
   as VIPs with no members at all.
 
-The plugin never changes NetScaler. It only sends NITRO `GET` requests.
+- **NetScaler tab on IP address pages**: for a VIP, its vservers, members (linked to their NetBox objects)
+  and GSLB names; for a member IP, the VIPs it belongs to.
+- **Sync VIPs** page (Plugins menu): compares live VIPs with NetBox IPAM and lets an engineer preview, tick and
+  apply changes. Run it whenever you like; there is no schedule.
+  - **Create**: VIPs that are UP but have no NetBox IP record. They're created as `/32`, role VIP, attached to
+    the pair's current Primary NetScaler VM.
+  - **Update**: VIP records whose status, description or attachment no longer matches NetScaler. Each row shows
+    old → new values. DNS names are only filled in when blank, never replaced.
+  - **Orphaned**: VIP records whose address isn't on any NetScaler. The only action is setting them to
+    deprecated; nothing is ever deleted. Orphans are hidden while any pair is unreachable.
+  - Non-VIP records at a VIP address are listed as conflicts and never changed. Every change is recorded in the
+    changelog under the user who applied it, plus a journal entry.
+
+This replaces the `netscaler_vip_sync.py` custom script.
+
+The plugin never changes NetScaler. It only sends NITRO `GET` requests. The only writes are to NetBox IPAM, and
+only when someone applies a sync.
 
 ## How it works
 
@@ -29,6 +45,12 @@ The plugin never changes NetScaler. It only sends NITRO `GET` requests.
    when it renders a page.
 
 Page loads never wait on NetScaler. The tab's visibility check and badge read the cache only.
+
+## Permissions
+
+- The tabs and the Stale VIPs page need view permission on the object or on IP addresses.
+- Sync VIPs: previewing needs `ipam.view_ipaddress`; applying needs `ipam.add_ipaddress` to create and
+  `ipam.change_ipaddress` to update or deprecate.
 
 ## Requirements
 
