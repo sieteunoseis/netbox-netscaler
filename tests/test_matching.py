@@ -139,6 +139,14 @@ def test_gslb_linked_across_pairs(inventories):
     assert gslb_for(inventories[0].vservers[1], inventories) == []
 
 
+def test_gslb_synced_on_two_pairs_listed_once(inventories):
+    """GSLB config is synced to every site, so the same GSLB vserver appears on each pair."""
+    copy = GslbName(pair="Pair A", vserver="app1-gslb", domains=["app1.example.com"], state="UP", service_targets=[("192.0.2.10", 443)])
+    inventories[0].gslb.append(copy)
+    app1 = inventories[0].vservers[0]
+    assert [(g.vserver, g.domains) for g in gslb_for(app1, inventories)] == [("app1-gslb", ["app1.example.com"])]
+
+
 def test_unavailable_pairs_skipped(inventories):
     inventories[0].available = False
     assert memberships_for_ips({"198.51.100.11"}, "vm:1", inventories, resolve) == []

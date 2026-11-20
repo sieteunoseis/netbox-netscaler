@@ -56,9 +56,21 @@ def is_name_mismatch(servername: str, matches: list[Match]) -> bool:
 
 
 def gslb_for(vserver: Vserver, inventories: list[PairInventory]) -> list[GslbName]:
-    """GSLB vservers (on any pair) whose services point at this lb vserver's VIP:port."""
+    """GSLB vservers (on any pair) whose services point at this lb vserver's VIP:port.
+
+    GSLB config is synced to every site, so the same vserver/domains on several pairs is listed once.
+    """
     target = (vserver.ip, vserver.port)
-    return [g for inv in inventories if inv.available for g in inv.gslb if target in g.service_targets]
+    seen, result = set(), []
+    for inv in inventories:
+        if not inv.available:
+            continue
+        for g in inv.gslb:
+            key = (g.vserver, tuple(g.domains))
+            if target in g.service_targets and key not in seen:
+                seen.add(key)
+                result.append(g)
+    return result
 
 
 def _is_last_live(vserver: Vserver, obj_key: str, resolve: Resolver) -> bool:
