@@ -16,4 +16,6 @@
 </div>
 {% for pair in pairs %}{% if not pair.available %}
 <div class="alert alert-warning py-2"><i class="mdi mdi-alert"></i> {{ pair.error }}</div>
+{% elif pair.warning %}
+<div class="alert alert-info py-2"><i class="mdi mdi-information-outline"></i> {{ pair.name }}: {{ pair.warning }}</div>
 {% endif %}{% endfor %}

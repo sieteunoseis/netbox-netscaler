@@ -47,6 +47,8 @@ class NitroClient:
             body = response.json()
         except ValueError as exc:
             raise NitroError(f"{self.host}: invalid JSON for {path}") from exc
+        if not isinstance(body, dict):
+            raise NitroError(f"{self.host}: unexpected JSON for {path}")
         if body.get("errorcode", 0) != 0:
             raise NitroError(f"{self.host}: errorcode {body.get('errorcode')} for {path}: {body.get('message')}")
         return body

@@ -172,3 +172,12 @@ def test_unavailable_pairs_skipped(inventories):
     inventories[0].available = False
     assert memberships_for_ips({"198.51.100.11"}, "vm:1", inventories, resolve) == []
     assert stale_vservers(inventories, resolve) == []
+
+
+def test_name_mismatch_ignores_ip_named_servers():
+    """NetScaler names a server after its IP when a member is bound by address."""
+    assert is_name_mismatch("198.51.100.11", [_match("vm:1", "app1a")]) is False
+
+
+def test_name_mismatch_handles_fqdn_object_names():
+    assert is_name_mismatch("app1a.example.com", [_match("vm:1", "app1a.example.com")]) is False

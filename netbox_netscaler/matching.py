@@ -3,6 +3,7 @@
 NetBox lookups are injected as a Resolver so this module stays testable without Django.
 """
 
+import ipaddress
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -51,8 +52,13 @@ def is_name_mismatch(servername: str, matches: list[Match]) -> bool:
     """True when the NetScaler server name matches neither the NetBox object nor the IP's DNS name."""
     if not servername or not matches:
         return False
+    try:
+        ipaddress.ip_address(servername)
+        return False  # server object named after its IP (member bound by address): nothing to compare
+    except ValueError:
+        pass
     short = _short(servername)
-    return all(short != m.obj_name.lower() and short != _short(m.ip_dns_name) for m in matches)
+    return all(short != _short(m.obj_name) and short != _short(m.ip_dns_name) for m in matches)
 
 
 def gslb_for(vserver: Vserver, inventories: list[PairInventory]) -> list[GslbName]:

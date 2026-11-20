@@ -89,3 +89,10 @@ def test_find_primary_none_primary():
 def test_find_primary_standalone_node():
     fake = FakeClient({"ns-solo.example.com": {"errorcode": 0, "hanode": [{"id": "0", "state": "StayPrimary"}]}})
     assert find_primary(["ns-solo.example.com"], fake.factory) == ("ns-solo.example.com", None)
+
+
+def test_get_raises_nitro_error_on_non_object_json():
+    with mock.patch("netbox_netscaler.nitro.requests.get") as get:
+        get.return_value = _response(["not", "a", "dict"])
+        with pytest.raises(NitroError, match="ns-a1.example.com"):
+            NitroClient("ns-a1.example.com", "u", "p").get("config/lbvserver")

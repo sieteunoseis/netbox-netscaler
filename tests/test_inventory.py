@@ -81,3 +81,37 @@ def test_fetch_pair_uses_pair_credentials_override(fixture):
     inv = fetch_pair(pair, {"username": "u", "password": "p", "timeout": 9, "verify_ssl": False}, factory)
     assert inv.available is True and len(inv.vservers) == 4
     assert all(s == ("ns-a1.example.com", "pairuser", "pairpw", 9, False) for s in seen)
+
+
+def _factory_with(fixture, overrides):
+    def factory(host, *args):
+        class _C:
+            def get(self, path):
+                if path in overrides:
+                    value = overrides[path]
+                    if isinstance(value, Exception):
+                        raise value
+                    return value
+                if path == "config/hanode":
+                    return fixture("hanode_primary.json")
+                return fixture(FIXTURE_FOR[path])
+
+        return _C()
+
+    return factory
+
+
+def test_gslb_endpoint_refused_keeps_lb_data(fixture):
+    """A box without GSLB may refuse the GSLB endpoints; the lb VIPs must still show."""
+    factory = _factory_with(fixture, {"config/gslbvserver": NitroError("ns-a1.example.com: errorcode 257")})
+    inv = fetch_pair({"name": "Pair A", "nodes": ["ns-a1.example.com"]}, {}, factory)
+    assert inv.available is True
+    assert len(inv.vservers) == 4 and inv.gslb == []
+    assert "gslbvserver" in inv.warning
+
+
+def test_fetch_pair_never_raises_on_malformed_response(fixture):
+    factory = _factory_with(fixture, {"config/lbvserver": {"errorcode": 0, "lbvserver": [{"ipv46": "192.0.2.1"}]}})
+    inv = fetch_pair({"name": "Pair A", "nodes": ["ns-a1.example.com"]}, {}, factory)
+    assert inv.available is False
+    assert "Pair A" in inv.error

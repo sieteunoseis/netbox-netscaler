@@ -1,9 +1,12 @@
 """Normalize NITRO responses from one HA pair's Primary into plain dataclasses."""
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from .nitro import NitroClient, NitroError, find_primary
+
+logger = logging.getLogger(__name__)
 
 LBVSERVER = "config/lbvserver"
 SG_MEMBER_BY_VSERVER = "config/lbvserver_servicegroupmember_binding?bulkbindings=yes"
@@ -12,6 +15,9 @@ SERVICE_BY_VSERVER = "config/lbvserver_service_binding?bulkbindings=yes"
 GSLBVSERVER = "config/gslbvserver"
 GSLB_DOMAIN = "config/gslbvserver_domain_binding?bulkbindings=yes"
 GSLB_SERVICE = "config/gslbvserver_gslbservice_binding?bulkbindings=yes"
+
+# Endpoints a box may refuse (e.g. no GSLB feature/licence) without losing the lb data.
+OPTIONAL_ENDPOINTS = (GSLBVSERVER, GSLB_DOMAIN, GSLB_SERVICE)
 
 ENDPOINTS = (LBVSERVER, SG_MEMBER_BY_VSERVER, SG_MEMBER, SERVICE_BY_VSERVER, GSLBVSERVER, GSLB_DOMAIN, GSLB_SERVICE)
 
@@ -54,6 +60,7 @@ class PairInventory:
     fetched_at: datetime
     vservers: list[Vserver] = field(default_factory=list)
     gslb: list[GslbName] = field(default_factory=list)
+    warning: str | None = None
 
 
 def _rows(resp: dict, key: str) -> list[dict]:
@@ -145,7 +152,7 @@ def build_inventory(pair_name: str, node: str, raw: dict[str, dict]) -> PairInve
 
 
 def fetch_pair(pair: dict, defaults: dict, client_factory=NitroClient) -> PairInventory:
-    """Find the pair's Primary and pull its inventory. Never raises on NetScaler errors."""
+    """Find the pair's Primary and pull its inventory. Never raises: failures become an unavailable inventory."""
     name = pair.get("name", ", ".join(pair.get("nodes", [])))
 
     def make(host):
@@ -157,14 +164,31 @@ def fetch_pair(pair: dict, defaults: dict, client_factory=NitroClient) -> PairIn
             defaults.get("verify_ssl", False),
         )
 
+    def unavailable(message):
+        return PairInventory(
+            name=name, available=False, node=None, error=f"{name}: {message}", fetched_at=datetime.now(timezone.utc)
+        )
+
     try:
         primary, error = find_primary(pair.get("nodes", []), make)
         if primary is None:
             raise NitroError(error)
         client = make(primary)
-        raw = {path: client.get(path) for path in ENDPOINTS}
+        raw, skipped = {}, []
+        for path in ENDPOINTS:
+            try:
+                raw[path] = client.get(path)
+            except NitroError as exc:
+                if path not in OPTIONAL_ENDPOINTS:
+                    raise
+                raw[path] = {}
+                skipped.append(f"{path.split('?')[0]} ({exc})")
+        inventory = build_inventory(name, primary, raw)
     except NitroError as exc:
-        return PairInventory(
-            name=name, available=False, node=None, error=f"{name}: {exc}", fetched_at=datetime.now(timezone.utc)
-        )
-    return build_inventory(name, primary, raw)
+        return unavailable(exc)
+    except Exception as exc:  # malformed data must not turn the page into a 500
+        logger.exception("netbox_netscaler: unexpected error reading pair %s", name)
+        return unavailable(f"unexpected {exc.__class__.__name__}: {exc}")
+    if skipped:
+        inventory.warning = "GSLB data unavailable: " + "; ".join(skipped)
+    return inventory
