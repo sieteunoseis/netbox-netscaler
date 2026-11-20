@@ -32,6 +32,7 @@ class NetScalerConfig(PluginConfig):
         "cache_timeout": 900,
         "timeout": 15,
         "verify_ssl": False,
+        "vip_tenant": "",
     }
 
 

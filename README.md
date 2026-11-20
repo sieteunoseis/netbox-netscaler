@@ -97,6 +97,7 @@ Restart NetBox. No migrations are needed; the plugin has no database models.
 | `cache_timeout` | `900` | Seconds to cache each pair's inventory. An unreachable pair is cached for at most 60 s. |
 | `timeout` | `15` | NITRO request timeout in seconds |
 | `verify_ssl` | `False` | Verify NetScaler TLS certificates |
+| `vip_tenant` | `""` | Tenant slug set on VIP records created by Sync VIPs (blank = no tenant) |
 | `tab_weight` | `9005` | Position of the NetScaler tab on object pages |
 | `top_level_menu` | `False` | `True` gives the plugin its own sidebar menu instead of an entry under Plugins |
 

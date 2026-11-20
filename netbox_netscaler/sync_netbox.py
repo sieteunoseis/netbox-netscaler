@@ -11,7 +11,7 @@ from ipam.models import IPAddress
 from tenancy.models import Tenant
 from virtualization.models import VirtualMachine, VMInterface
 
-from .cache import get_inventories
+from .cache import get_inventories, plugin_settings
 from .sync import NbIp, SyncPlan, Target, fingerprint, plan_sync
 
 
@@ -70,7 +70,8 @@ def apply(plan: SyncPlan, selected: set[str], fingerprints: dict[str, str], user
     """Apply the selected rows of a freshly built plan. Rows changed since the preview are skipped."""
     result = {"created": [], "updated": [], "deprecated": [], "skipped": []}
     rows = plan_rows(plan)
-    tenant = Tenant.objects.filter(slug="").first()
+    slug = plugin_settings().get("vip_tenant") or ""
+    tenant = Tenant.objects.filter(slug=slug).first() if slug else None
 
     with transaction.atomic():
         for key in sorted(selected):
