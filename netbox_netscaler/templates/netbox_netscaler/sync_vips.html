@@ -24,10 +24,13 @@
                     <tbody>
                     {% for d in plan.creates %}
                     <tr>
-                        <td><input type="checkbox" class="form-check-input" name="row" value="create:{{ d.host }}" {% if not can_add %}disabled{% endif %}></td>
+                        <td>
+                            <input type="checkbox" class="form-check-input" name="row" value="create:{{ d.host }}" {% if not can_add %}disabled{% endif %}>
+                            <input type="hidden" name="fp:create:{{ d.host }}" value="{{ d.fingerprint }}">
+                        </td>
                         <td>{{ d.pair }}</td><td>{{ d.host }}/32</td><td><code>{{ d.vserver }}</code><div class="text-muted small">{{ d.description }}</div></td>
                         <td><span class="badge text-bg-success">{{ d.status }}</span></td><td>{{ d.dns_name|default:"&mdash;" }}</td>
-                        <td>{% if d.vm_name %}{{ d.vm_name }}{% else %}<span class="badge text-bg-warning">unassigned: no NetBox VM</span>{% endif %}</td>
+                        <td>{% if d.interface_id %}{{ d.vm_name }}{% elif d.vm_name %}<span class="badge text-bg-warning">unassigned: {{ d.vm_name }} has no interface</span>{% else %}<span class="badge text-bg-warning">unassigned: no NetBox VM</span>{% endif %}</td>
                     </tr>
                     {% endfor %}
                     </tbody>
@@ -64,9 +67,9 @@
                 <div class="card-header"><h5 class="card-title mb-0"><i class="mdi mdi-help-circle-outline"></i> Orphaned: VIP records not on any NetScaler <span class="badge text-bg-primary ms-2">{{ plan.orphans|length }}</span></h5></div>
                 <div class="card-body">
                 {% if plan.orphans_suppressed %}
-                <div class="alert alert-warning mb-0"><i class="mdi mdi-alert"></i> Not shown while a NetScaler pair is unavailable, so nothing gets deprecated because a box is unreachable.</div>
+                <div class="alert alert-warning mb-0"><i class="mdi mdi-alert"></i> Not shown while a NetScaler pair is unavailable or returned no VIPs, so nothing gets deprecated because a box is unreachable or incomplete.</div>
                 {% elif plan.orphans %}
-                <p class="text-muted small">The only action offered is setting the status to <em>deprecated</em>. Nothing is deleted.</p>
+                <p class="text-muted small">Only records written by NetScaler sync (description starting "NetScaler VIP - ") are considered. Content-switching, VPN and non-NetScaler VIPs are not read, so they never appear here. The only action offered is setting the status to <em>deprecated</em>. Nothing is deleted.</p>
                 <table class="table table-hover align-middle">
                     <thead><tr><th></th><th>Record</th><th>Status</th><th>DNS name</th><th>Description</th></tr></thead>
                     <tbody>

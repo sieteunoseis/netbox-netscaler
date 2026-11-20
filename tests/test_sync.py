@@ -115,7 +115,12 @@ def test_priority_up_wins():
 
 def test_orphan_listed():
     inv = _inv(_vs("app1_443_vsvr", "192.0.2.10"), _vs("x_443_backup_vsvr", "192.0.2.21"))
-    records = [_ip(1, "192.0.2.99"), _ip(2, "192.0.2.98", status="deprecated"), _ip(3, "192.0.2.21")]
+    ns = "NetScaler VIP - SSL:443 - UP [old_443_vsvr]"
+    records = [
+        _ip(1, "192.0.2.99", description=ns),
+        _ip(2, "192.0.2.98", status="deprecated", description=ns),
+        _ip(3, "192.0.2.21", description=ns),
+    ]
     plan = plan_sync([inv], records, TARGETS)
     assert [ip.pk for ip in plan.orphans] == [1]
     assert plan.orphans_suppressed is False
@@ -139,9 +144,10 @@ def test_fingerprint_changes_with_record():
 
 
 def test_orphan_record_has_fingerprint():
-    record = _ip(1, "192.0.2.99")
+    ns = "NetScaler VIP - SSL:443 - UP [old_443_vsvr]"
+    record = _ip(1, "192.0.2.99", description=ns)
     [orphan] = plan_sync([_inv(_vs("app1_443_vsvr", "192.0.2.10"))], [record], TARGETS).orphans
-    assert orphan.fingerprint and orphan.fingerprint == _ip(1, "192.0.2.99").fingerprint
+    assert orphan.fingerprint and orphan.fingerprint == _ip(1, "192.0.2.99", description=ns).fingerprint
 
 
 def test_update_keeps_existing_dns_even_if_gslb_differs():
@@ -150,3 +156,91 @@ def test_update_keeps_existing_dns_even_if_gslb_differs():
     gslb = [GslbName("Pair A", "g", ["app1.gslb.example.com"], "UP", [("192.0.2.10", 443)])]
     record = _ip(1, "192.0.2.10", description=desc, dns="app1.example.com")
     assert plan_sync([_inv(_vs("app1_443_vsvr", "192.0.2.10"), gslb=gslb)], [record], TARGETS).updates == []
+
+
+# --- second-review fixes -------------------------------------------------------------------------
+
+from netbox_netscaler.sync import run_actions, select_actions  # noqa: E402
+
+
+def test_update_fingerprint_covers_planned_change():
+    """If the planned values change between preview and apply, the fingerprint must change too."""
+    record = _ip(1, "192.0.2.10", status="reserved")
+    up = plan_sync([_inv(_vs("app1_443_vsvr", "192.0.2.10"))], [record], TARGETS).updates[0]
+    oos = plan_sync([_inv(_vs("app1_443_vsvr", "192.0.2.10", state="OUT OF SERVICE"))], [record], TARGETS).updates[0]
+    assert up.fingerprint != oos.fingerprint
+
+
+def test_create_fingerprint_covers_desired_values():
+    a = plan_sync([_inv(_vs("app1_443_vsvr", "192.0.2.10"))], [], TARGETS).creates[0]
+    b = plan_sync([_inv(_vs("app1_443_vsvr", "192.0.2.10"))], [], {"Pair A": Target(3, "ns-a1")}).creates[0]
+    assert a.fingerprint and a.fingerprint != b.fingerprint
+
+
+def test_primary_ip_not_moved():
+    """NetBox refuses to reassign an IP that is its parent's primary/OOB IP; don't offer the move."""
+    desc = "NetScaler VIP - SSL:443 - UP [app1_443_vsvr]"
+    record = _ip(1, "192.0.2.10", description=desc, iface=5)
+    record.locked = True
+    assert plan_sync([_inv(_vs("app1_443_vsvr", "192.0.2.10"))], [record], TARGETS).updates == []
+
+
+def test_orphans_suppressed_when_available_pair_has_no_vservers():
+    plan = plan_sync([_inv(_vs("app1_443_vsvr", "192.0.2.10")), _inv(name="Pair B")], [_ip(1, "192.0.2.99")], TARGETS)
+    assert plan.orphans == [] and plan.orphans_suppressed is True
+
+
+def test_orphans_only_netscaler_written_records():
+    records = [
+        _ip(1, "192.0.2.99", description="NetScaler VIP - SSL:443 - UP [gone_443_vsvr]"),
+        _ip(2, "192.0.2.98", description="HSRP VIP"),
+    ]
+    plan = plan_sync([_inv(_vs("app1_443_vsvr", "192.0.2.10"))], records, TARGETS)
+    assert [ip.pk for ip in plan.orphans] == [1]
+
+
+def _plan_with_rows():
+    inv = [_inv(_vs("app1_443_vsvr", "192.0.2.10"), _vs("app2_443_vsvr", "192.0.2.11"))]
+    records = [
+        _ip(1, "192.0.2.11", status="reserved"),
+        _ip(2, "192.0.2.99", description="NetScaler VIP - SSL:443 - UP [gone_443_vsvr]"),
+    ]
+    return plan_sync(inv, records, TARGETS)
+
+
+def test_select_actions_skips_stale_and_unknown():
+    plan = _plan_with_rows()
+    fps = {
+        "create:192.0.2.10": plan.creates[0].fingerprint,
+        "update:1": "stale",
+        "orphan:2": plan.orphans[0].fingerprint,
+    }
+    actions, skipped = select_actions(plan, set(fps) | {"update:999"}, fps, changeable_pks={1, 2})
+    assert [a.key for a in actions] == ["create:192.0.2.10", "orphan:2"]
+    assert dict(skipped) == {"update:1": "changed since preview", "update:999": "no longer in the plan"}
+
+
+def test_select_actions_enforces_object_permissions():
+    plan = _plan_with_rows()
+    fps = {"update:1": plan.updates[0].fingerprint, "orphan:2": plan.orphans[0].fingerprint}
+    actions, skipped = select_actions(plan, set(fps), fps, changeable_pks={2})
+    assert [a.key for a in actions] == ["orphan:2"]
+    assert dict(skipped) == {"update:1": "no permission to change this IP address"}
+
+
+def test_run_actions_reports_row_errors_and_continues():
+    plan = _plan_with_rows()
+    fps = {"create:192.0.2.10": plan.creates[0].fingerprint, "orphan:2": plan.orphans[0].fingerprint}
+    actions, _ = select_actions(plan, set(fps), fps, changeable_pks={2})
+
+    def execute(action):
+        if action.kind == "create":
+            raise ValueError("Cannot reassign IP address while it is designated as the primary IP")
+        return "192.0.2.99/32"
+
+    result = run_actions(actions, execute)
+    assert result["deprecated"] == ["192.0.2.99/32"]
+    assert result["created"] == []
+    assert result["skipped"] == [
+        ("create:192.0.2.10", "Cannot reassign IP address while it is designated as the primary IP")
+    ]
