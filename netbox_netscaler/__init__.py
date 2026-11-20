@@ -7,7 +7,7 @@ on VirtualMachine and Device detail pages, plus a Stale VIPs report.
 
 from netbox.plugins import PluginConfig
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 
 class NetScalerConfig(PluginConfig):

@@ -20,7 +20,7 @@
                 <div class="card-body">
                 {% if plan.creates %}
                 <table class="table table-hover align-middle">
-                    <thead><tr><th></th><th>Pair</th><th>Address</th><th>Vserver</th><th>Status</th><th>DNS name</th><th>Attach to</th></tr></thead>
+                    <thead><tr><th><input type="checkbox" class="form-check-input ns-select-all" title="Select all" {% if not can_add %}disabled{% endif %}></th><th>Pair</th><th>Address</th><th>Vserver</th><th>Status</th><th>DNS name</th><th>Attach to</th></tr></thead>
                     <tbody>
                     {% for d in plan.creates %}
                     <tr>
@@ -44,7 +44,7 @@
                 <div class="card-body">
                 {% if plan.updates %}
                 <table class="table table-hover align-middle">
-                    <thead><tr><th></th><th>Record</th><th>Pair / vserver</th><th>Changes (old &rarr; new)</th></tr></thead>
+                    <thead><tr><th><input type="checkbox" class="form-check-input ns-select-all" title="Select all" {% if not can_change %}disabled{% endif %}></th><th>Record</th><th>Pair / vserver</th><th>Changes (old &rarr; new)</th></tr></thead>
                     <tbody>
                     {% for c in plan.updates %}
                     <tr>
@@ -71,7 +71,7 @@
                 {% elif plan.orphans %}
                 <p class="text-muted small">Only records written by NetScaler sync (description starting "NetScaler VIP - ") are considered. Content-switching, VPN and non-NetScaler VIPs are not read, so they never appear here. The only action offered is setting the status to <em>deprecated</em>. Nothing is deleted.</p>
                 <table class="table table-hover align-middle">
-                    <thead><tr><th></th><th>Record</th><th>Status</th><th>DNS name</th><th>Description</th></tr></thead>
+                    <thead><tr><th><input type="checkbox" class="form-check-input ns-select-all" title="Select all" {% if not can_change %}disabled{% endif %}></th><th>Record</th><th>Status</th><th>DNS name</th><th>Description</th></tr></thead>
                     <tbody>
                     {% for ip in plan.orphans %}
                     <tr>
@@ -106,11 +106,34 @@
             {% endif %}
 
             {% if can_add or can_change %}
-            <button type="submit" class="btn btn-primary"><i class="mdi mdi-check"></i> Apply selected</button>
+            <button type="submit" class="btn btn-primary"><i class="mdi mdi-check"></i> Apply selected (<span id="ns-selected-count">0</span>)</button>
             {% else %}
             <div class="alert alert-info">You can preview, but applying needs permission to add or change IP addresses.</div>
             {% endif %}
         </form>
     </div>
 </div>
+<script>
+(function () {
+    function rows(table) { return table.querySelectorAll('tbody input[type="checkbox"][name="row"]:not(:disabled)'); }
+    function refresh() {
+        var label = document.getElementById("ns-selected-count");
+        if (label) { label.textContent = document.querySelectorAll('input[type="checkbox"][name="row"]:checked').length; }
+        document.querySelectorAll(".ns-select-all").forEach(function (all) {
+            var boxes = rows(all.closest("table"));
+            var checked = Array.prototype.filter.call(boxes, function (b) { return b.checked; }).length;
+            all.checked = boxes.length > 0 && checked === boxes.length;
+            all.indeterminate = checked > 0 && checked < boxes.length;
+        });
+    }
+    document.querySelectorAll(".ns-select-all").forEach(function (all) {
+        all.addEventListener("change", function () {
+            rows(all.closest("table")).forEach(function (b) { b.checked = all.checked; });
+            refresh();
+        });
+    });
+    document.querySelectorAll('input[type="checkbox"][name="row"]').forEach(function (b) { b.addEventListener("change", refresh); });
+    refresh();
+})();
+</script>
 {% endblock %}
