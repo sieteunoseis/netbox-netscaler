@@ -21,6 +21,7 @@ dist/
 .dmypy.json
 dmypy.json
 docs/_build/
+docs/superpowers/
 downloads/
 .DS_Store
 *.egg
